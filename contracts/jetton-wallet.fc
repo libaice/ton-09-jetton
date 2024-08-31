@@ -1,0 +1,68 @@
+#include "imports/stdlib.fc";
+#include "imports/params.fc";
+
+int min_tons_for_storage() asm "10000000 PUSHINT"; ;; 0.01 TON
+int gas_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
+
+(int, slice, slice, cell) load_data() inline {
+    slice ds = get_data().begin_parse();
+    return (
+        ds~load_coins(),
+        ds~load_msg_addr(),
+        ds~load_msg_addr(),
+        ds~load_ref()
+    );
+}
+cell pack_jetton_wallet_data(int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+    return begin_cell()
+        .store_coins(balance)
+        .store_slice(owner_address)
+        .store_slice(jetton_master_address)
+        .store_ref(jetton_wallet_code)
+        .end_cell();
+}
+
+()save_data(int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) impure inline {
+    set_data(pack_jetton_wallet_data(balance, owner_address, jetton_master_address, jetton_wallet_code));
+}
+
+
+()send_tokens(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
+    int query_id = in_msg_body~load_uint(64);
+    int jetton_amount = in_msg_body~load_coins();
+    slice to_owner_address = in_msg_body~load_msg_addr();
+    force_chain(to_owner_address);
+    (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
+    balance -= jetton_amount;
+
+}
+
+() receive_tokens(slice in_msg_body, slice sender_address, int my_ton_balance, int fwd_fee, int msg_value) impure {
+
+}
+
+() burn_tokens(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
+
+}
+
+() on_bounce(slice in_msg_body) impure {
+
+}
+
+() recv_internal(int balance, int msg_value, cell in_msg_full, slice in_msg_body) {
+    if (in_msg_body.slice_empty?()) {
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        on_bounce(in_msg_body);
+        return ();
+    }
+}
+
+(int, slice, slice, cell) get_wallet_data() method_id {
+    return load_data();
+}
+

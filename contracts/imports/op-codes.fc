@@ -1,3 +1,5 @@
 int op::mint() asm "21 PUSHINT";
 
 int op::burn_notification() asm "0x7bdd97de PUSHINT";
+
+int op::excesses() asm "0xd53276db PUSHINT";
