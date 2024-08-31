@@ -1,3 +1,4 @@
+#include "imports/op-codes.fc";
 #include "imports/stdlib.fc";
 
 int workchain() asm "0 PUSHINT";
@@ -26,6 +27,8 @@ cell pack_jetton_wallet_data(int balance, slice owner_address, slice jetton_mast
         .end_cell();
 }
 
+
+
 cell calculate_jetton_wallet_state_init(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
     return begin_cell()
         .store_uint(0, 2)
@@ -44,6 +47,10 @@ slice calculate_jetton_wallet_address(cell state_init) inline {
         .begin_parse();
 }
 
+slice calculate_user_jetton_wallet_address(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+    return calculate_jetton_wallet_address(calculate_jetton_wallet_state_init(owner_address, jetton_master_address, jetton_wallet_code));
+}
+
 () mint_tokens(slice to_address, cell jetton_wallet_code, int amount, cell master_msg) impure {
     cell state_init = calculate_jetton_wallet_state_init(to_address, my_address(), jetton_wallet_code);
     slice to_wallet_address = calculate_jetton_wallet_address(state_init);
@@ -53,7 +60,8 @@ slice calculate_jetton_wallet_address(cell state_init) inline {
         .store_coins(amount)
         .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
         .store_ref(state_init)
-        .store_ref(master_msg).end_cell();
+        .store_ref(master_msg)
+        .end_cell();
     send_raw_message(msg, 1);
 }
 
@@ -62,10 +70,43 @@ slice calculate_jetton_wallet_address(cell state_init) inline {
     if (in_msg_body.slice_empty?()) {
         return ();
     }
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        return ();
+    }
+
+    slice sender_address = cs~load_msg_addr();
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    (int total_supply, slice admin_address, cell content, cell jetton_wallet_code) = load_data();
+
+    if (op == op::mint()) {
+
+    }
+
+    if (op == op::burn_notification()) {
+
+    }
+
+    if (op == 3) {
+
+    }
+
+    if (op == 4) {
+
+    }
+    throw(0xffff);
 }
 
 
 (int, int, slice, cell, cell) get_jetton_data() method_id {
     (int total_supply, slice admin_address, cell content, cell jetton_wallet_code) = load_data();
     return (total_supply, -1, admin_address, content, jetton_wallet_code);
+}
+
+slice get_wallet_address(slice owner_address) method_id {
+    (int total_supply, slice admin_address, cell content, cell jetton_wallet_code) = load_data();
+    return calculate_user_jetton_wallet_address(owner_address, my_address(), jetton_wallet_code);
 }

@@ -1,0 +1,3 @@
+int op::mint() asm "21 PUSHINT";
+
+int op::burn_notification() asm "0x7bdd97de PUSHINT";
